@@ -15,7 +15,7 @@ module Paperclip
       }
     end
 
-    attr_reader :name, :instance, :styles, :default_style, :convert_options
+    attr_reader :name, :instance, :styles, :default_style, :convert_options, :queued_for_write
 
     # Creates an Attachment object. +name+ is the name of the attachment, +instance+ is the
     # ActiveRecord object instance it's attached to, and +options+ is the same as the hash

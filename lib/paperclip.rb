@@ -25,6 +25,7 @@
 #
 # See the +has_attached_file+ documentation for more details.
 
+require 'erb'
 require 'tempfile'
 require 'paperclip/upfile'
 require 'paperclip/iostream'
@@ -44,7 +45,7 @@ end
 # documentation for Paperclip::ClassMethods for more useful information.
 module Paperclip
 
-  VERSION = "2.3.0"
+  VERSION = "2.3.1"
 
   class << self
     # Provides configurability to Paperclip. There are a number of options available, such as:
@@ -257,7 +258,9 @@ module Paperclip
       range   = (min..max)
       message = options[:message] || "file size must be between :min and :max bytes."
 
-      attachment_definitions[name][:validations] << [:size, {:range   => range,
+      attachment_definitions[name][:validations] << [:size, {:min     => min,
+                                                             :max     => max,
+                                                             :range   => range,
                                                              :message => message,
                                                              :if      => options[:if],
                                                              :unless  => options[:unless]}]

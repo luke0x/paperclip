@@ -1,6 +1,13 @@
 require 'test/helper'
+require 'aws/s3'
 
 class StorageTest < Test::Unit::TestCase
+  def rails_env(env)
+    silence_warnings do
+      Object.const_set(:RAILS_ENV, env)
+    end
+  end
+
   context "Parsing S3 credentials" do
     setup do
       AWS::S3::Base.stubs(:establish_connection!)
@@ -15,25 +22,25 @@ class StorageTest < Test::Unit::TestCase
     end
 
     teardown do
-      Object.const_set("RAILS_ENV", @current_env)
+      rails_env(@current_env)
     end
 
     should "get the correct credentials when RAILS_ENV is production" do
-      Object.const_set('RAILS_ENV', "production")
+      rails_env("production")
       assert_equal({:key => "12345"},
                    @avatar.parse_credentials('production' => {:key => '12345'},
                                              :development => {:key => "54321"}))
     end
 
     should "get the correct credentials when RAILS_ENV is development" do
-      Object.const_set('RAILS_ENV', "development")
+      rails_env("development")
       assert_equal({:key => "54321"},
                    @avatar.parse_credentials('production' => {:key => '12345'},
                                              :development => {:key => "54321"}))
     end
 
     should "return the argument if the key does not exist" do
-      Object.const_set('RAILS_ENV', "not really an env")
+      rails_env("not really an env")
       assert_equal({:test => "12345"}, @avatar.parse_credentials(:test => "12345"))
     end
   end
@@ -102,15 +109,15 @@ class StorageTest < Test::Unit::TestCase
       @old_env = RAILS_ENV
     end
 
-    teardown{ Object.const_set("RAILS_ENV", @old_env) }
+    teardown{ rails_env(@old_env) }
 
     should "get the right bucket in production" do
-      Object.const_set("RAILS_ENV", "production")
+      rails_env("production")
       assert_equal "prod_bucket", @dummy.avatar.bucket_name
     end
 
     should "get the right bucket in development" do
-      Object.const_set("RAILS_ENV", "development")
+      rails_env("development")
       assert_equal "dev_bucket", @dummy.avatar.bucket_name
     end
   end
@@ -226,6 +233,29 @@ class StorageTest < Test::Unit::TestCase
           assert true
         end
       end
+    end
+  end
+
+  context "with S3 credentials in a YAML file" do
+    setup do
+      ENV['S3_KEY']    = 'env_key'
+      ENV['S3_BUCKET'] = 'env_bucket'
+      ENV['S3_SECRET'] = 'env_secret'
+
+      rails_env('test')
+
+      rebuild_model :storage        => :s3,
+                    :s3_credentials => File.new(File.join(File.dirname(__FILE__), "fixtures/s3.yml"))
+
+      Dummy.delete_all
+
+      @dummy = Dummy.new
+    end
+
+    should "run it the file through ERB" do
+      assert_equal 'env_bucket', @dummy.avatar.bucket_name
+      assert_equal 'env_key', AWS::S3::Base.connection.options[:access_key_id]
+      assert_equal 'env_secret', AWS::S3::Base.connection.options[:secret_access_key]
     end
   end
 
